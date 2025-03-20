@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cola Preferences by Gender</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #0078d4;
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            gap: 20px;
+        }
+        
+        .btn {
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #005a9e;
+        }
+        
+        .btn.active {
+            background-color: #004578;
+        }
+        
+        .chart-container {
+            height: 400px;
+            position: relative;
+            margin-bottom: 30px;
+        }
+        
+        .bar-chart {
+            display: flex;
+            height: 100%;
+            align-items: flex-end;
+            gap: 20px;
+            padding: 0 40px;
+        }
+        
+        .bar-group {
+            display: flex;
+            flex-grow: 1;
+            height: 100%;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        
+        .bar-label {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 10px;
+            min-height: 40px;
+        }
+        
+        .bar-container {
+            display: flex;
+            height: 100%;
+            width: 100%;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .bar {
+            width: 40px;
+            background-color: #0078d4;
+            transition: height 0.5s ease-in-out;
+            border-radius: 5px 5px 0 0;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .bar.female {
+            background-color: #ff4081;
+        }
+        
+        .bar.male {
+            background-color: #0078d4;
+        }
+        
+        .bar-value {
+            position: absolute;
+            top: -25px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+        
+        .difference-indicator {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .difference-positive {
+            color: #4caf50;
+        }
+        
+        .difference-negative {
+            color: #f44336;
+        }
+        
+        .difference-neutral {
+            color: #9e9e9e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cola Preferences by Gender</h1>
+        
+        <div class="controls">
+            <button class="btn active" id="btn-all">All Data</button>
+            <button class="btn" id="btn-female">Female Preferences</button>
+            <button class="btn" id="btn-male">Male Preferences</button>
+            <button class="btn" id="btn-diff">Gender Differences</button>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ff4081;"></div>
+                <span>Female</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #0078d4;"></div>
+                <span>Male</span>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <div class="bar-chart" id="chart"></div>
+        </div>
+        
+        <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <script>
+        // Data from the table
+        const data = [
+            { name: "Coca-Cola", female: 44, male: 42, difference: 1 },
+            { name: "Diet Coke", female: 12, male: 8, difference: 4 },
+            { name: "Coke Zero", female: 20, male: 14, difference: 6 },
+            { name: "Pepsi", female: 7, male: 11, difference: -4 },
+            { name: "Diet Pepsi", female: 3, male: 2, difference: 1 },
+            { name: "Pepsi Max", female: 12, male: 19, difference: -7 },
+            { name: "Dislike all cola", female: 1, male: 1, difference: 0 },
+            { name: "Don't care", female: 1, male: 2, difference: -1 }
+        ];
+
+        // Create the chart
+        function createChart() {
+            const chart = document.getElementById('chart');
+            chart.innerHTML = '';
+            
+            data.forEach(item => {
+                const barGroup = document.createElement('div');
+                barGroup.className = 'bar-group';
+                
+                const barContainer = document.createElement('div');
+                barContainer.className = 'bar-container';
+                
+                // Female bar
+                const femaleBar = document.createElement('div');
+                femaleBar.className = 'bar female';
+                femaleBar.style.height = '0%';
+                
+                const femaleValue = document.createElement('div');
+                femaleValue.className = 'bar-value';
+                femaleValue.textContent = item.female + '%';
+                femaleBar.appendChild(femaleValue);
+                
+                // Male bar
+                const maleBar = document.createElement('div');
+                maleBar.className = 'bar male';
+                maleBar.style.height = '0%';
+                
+                const maleValue = document.createElement('div');
+                maleValue.className = 'bar-value';
+                maleValue.textContent = item.male + '%';
+                maleBar.appendChild(maleValue);
+                
+                // Add difference indicator
+                const differenceIndicator = document.createElement('div');
+                differenceIndicator.className = 'difference-indicator';
+                if (item.difference > 0) {
+                    differenceIndicator.classList.add('difference-positive');
+                    differenceIndicator.textContent = '+' + item.difference + '%';
+                } else if (item.difference < 0) {
+                    differenceIndicator.classList.add('difference-negative');
+                    differenceIndicator.textContent = item.difference + '%';
+                } else {
+                    differenceIndicator.classList.add('difference-neutral');
+                    differenceIndicator.textContent = '0%';
+                }
+                
+                barContainer.appendChild(femaleBar);
+                barContainer.appendChild(maleBar);
+                barGroup.appendChild(differenceIndicator);
+                barGroup.appendChild(barContainer);
+                
+                const barLabel = document.createElement('div');
+                barLabel.className = 'bar-label';
+                barLabel.textContent = item.name;
+                barGroup.appendChild(barLabel);
+                
+                chart.appendChild(barGroup);
+                
+                // Add tooltip events
+                femaleBar.addEventListener('mouseover', (e) => {
+                    showTooltip(e, `${item.name} - Female: ${item.female}%`);
+                });
+                
+                femaleBar.addEventListener('mouseout', () => {
+                    hideTooltip();
+                });
+                
+                maleBar.addEventListener('mouseover', (e) => {
+                    showTooltip(e, `${item.name} - Male: ${item.male}%`);
+                });
+                
+                maleBar.addEventListener('mouseout', () => {
+                    hideTooltip();
+                });
+            });
+            
+            // Animate bars after a short delay
+            setTimeout(() => {
+                const currentView = document.querySelector('.btn.active').id;
+                updateChart(currentView);
+            }, 100);
+        }
+        
+        // Update the chart based on the selected view
+        function updateChart(viewType) {
+            const maxValue = Math.max(...data.map(item => Math.max(item.female, item.male)));
+            const femaleBars = document.querySelectorAll('.bar.female');
+            const maleBars = document.querySelectorAll('.bar.male');
+            const differenceIndicators = document.querySelectorAll('.difference-indicator');
+            
+            switch(viewType) {
+                case 'btn-all':
+                    femaleBars.forEach((bar, index) => {
+                        bar.style.height = (data[index].female / maxValue * 100) + '%';
+                        bar.style.opacity = '1';
+                    });
+                    
+                    maleBars.forEach((bar, index) => {
+                        bar.style.height = (data[index].male / maxValue * 100) + '%';
+                        bar.style.opacity = '1';
+                    });
+                    
+                    differenceIndicators.forEach(indicator => {
+                        indicator.style.opacity = '0';
+                    });
+                    break;
+                    
+                case 'btn-female':
+                    femaleBars.forEach((bar, index) => {
+                        bar.style.height = (data[index].female / maxValue * 100) + '%';
+                        bar.style.opacity = '1';
+                    });
+                    
+                    maleBars.forEach(bar => {
+                        bar.style.height = '0%';
+                        bar.style.opacity = '0';
+                    });
+                    
+                    differenceIndicators.forEach(indicator => {
+                        indicator.style.opacity = '0';
+                    });
+                    break;
+                    
+                case 'btn-male':
+                    femaleBars.forEach(bar => {
+                        bar.style.height = '0%';
+                        bar.style.opacity = '0';
+                    });
+                    
+                    maleBars.forEach((bar, index) => {
+                        bar.style.height = (data[index].male / maxValue * 100) + '%';
+                        bar.style.opacity = '1';
+                    });
+                    
+                    differenceIndicators.forEach(indicator => {
+                        indicator.style.opacity = '0';
+                    });
+                    break;
+                    
+                case 'btn-diff':
+                    const maxDiff = Math.max(...data.map(item => Math.abs(item.difference)));
+                    
+                    femaleBars.forEach((bar, index) => {
+                        if (data[index].difference > 0) {
+                            bar.style.height = (data[index].difference / maxDiff * 50) + '%';
+                            bar.style.opacity = '1';
+                        } else {
+                            bar.style.height = '0%';
+                            bar.style.opacity = '0';
+                        }
+                    });
+                    
+                    maleBars.forEach((bar, index) => {
+                        if (data[index].difference < 0) {
+                            bar.style.height = (Math.abs(data[index].difference) / maxDiff * 50) + '%';
+                            bar.style.opacity = '1';
+                        } else {
+                            bar.style.height = '0%';
+                            bar.style.opacity = '0';
+                        }
+                    });
+                    
+                    differenceIndicators.forEach(indicator => {
+                        indicator.style.opacity = '1';
+                    });
+                    break;
+            }
+        }
+        
+        // Tooltip functions
+        function showTooltip(event, text) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.textContent = text;
+            tooltip.style.left = (event.pageX + 10) + 'px';
+            tooltip.style.top = (event.pageY - 20) + 'px';
+            tooltip.style.opacity = '1';
+        }
+        
+        function hideTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.style.opacity = '0';
+        }
+        
+        // Initialize the chart
+        document.addEventListener('DOMContentLoaded', () => {
+            createChart();
+            
+            // Add button event listeners
+            document.querySelectorAll('.btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    document.querySelector('.btn.active').classList.remove('active');
+                    button.classList.add('active');
+                    updateChart(button.id);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
