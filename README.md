@@ -1,108 +1,89 @@
-# NBA Game Prediction Project
+# NBA Game Predictor
 
-A machine learning system that predicts NBA basketball game outcomes using historical game data and XGBoost classification.
-
-## Overview
-
-This project uses advanced machine learning techniques to predict the winners of NBA games. The system:
-
-1. Processes historical NBA game data
-2. Performs extensive feature engineering
-3. Trains an XGBoost model with Bayesian hyperparameter optimization
-4. Evaluates model performance with time-series cross-validation
-5. Provides tools to make predictions on new games
+A machine learning model that predicts NBA game outcomes using historical data and team statistics.
 
 ## Features
 
-- **Advanced Feature Engineering**: Team performance metrics, rest days analysis, matchup history, and winning/losing streaks
-- **Bayesian Hyperparameter Optimization**: Uses Optuna to find optimal model parameters
-- **Time Series Validation**: Ensures the model is evaluated on future games
-- **Model Explainability**: SHAP values to explain predictions
-- **Prediction Interface**: Command-line tools to predict single games or entire schedules
-
-## Project Structure
-
-- `nba_game_predictor.py`: Main module for loading data, feature engineering, and model training
-- `advanced_features.py`: Module for creating advanced team and game features
-- `model_evaluation.py`: Functions for evaluating model performance
-- `hyperparameter_tuning.py`: Bayesian optimization for XGBoost hyperparameters
-- `predict_games.py`: Command-line interface for predicting games
+- Fetches historical game data and team statistics directly from the NBA API
+- Automatically retrieves upcoming schedule for the next 7 days
+- Predicts game outcomes using an XGBoost model
+- Provides win probabilities and confidence scores
+- Generates visualizations of predictions
+- Supports both single game and batch predictions
 
 ## Installation
 
 1. Clone the repository:
-```
-git clone https://github.com/yourusername/nba-game-predictor.git
-cd nba-game-predictor
+```bash
+git clone https://github.com/yourusername/ML-NBA-Game-Predictor.git
+cd ML-NBA-Game-Predictor
 ```
 
-2. Install dependencies:
-```
+2. Install the required packages:
+```bash
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-### Training a Model
+### Fetch NBA Data
 
-```python
-python nba_game_predictor.py
-```
-
-This will:
-1. Load historical game data
-2. Engineer features
-3. Train a model with optimized hyperparameters
-4. Evaluate performance
-5. Save the model to the `model` directory
-
-### Predicting a Single Game
+To fetch the latest NBA data (historical games, upcoming schedule, and team statistics):
 
 ```bash
-python predict_games.py single --home LAL --away BOS --stats team_stats.csv
+python nba_data_fetcher.py
 ```
 
-### Predicting Games from a Schedule
+This will create a `data` directory containing:
+- `historical_games.csv`: Historical game data from the last 3 seasons
+- `upcoming_schedule.csv`: Upcoming games for the next 7 days
+- `team_stats.csv`: Team statistics and averages
+
+### Predict Single Game
+
+To predict the outcome of a single game:
 
 ```bash
-python predict_games.py schedule --schedule upcoming_games.csv --stats team_stats.csv
+python predict_games.py --single_game --home_team LAL --away_team BOS --game_date 2024-03-25
 ```
 
-## Data Format
+### Predict Upcoming Games
 
-### Game Data
+To predict outcomes for all upcoming games in the next 7 days:
 
-The model expects NBA game data in CSV format with the following columns:
-- `game_date`: Date of the game
-- `team_abbreviation_home`: Home team abbreviation (e.g., 'LAL')
-- `team_abbreviation_away`: Away team abbreviation (e.g., 'BOS')
-- Various team stats columns with '_home' and '_away' suffixes
+```bash
+python predict_games.py
+```
 
-### Upcoming Schedule
+The predictions will be saved in the `predictions` directory with timestamps:
+- `predictions_YYYYMMDD_HHMMSS.csv`: Detailed predictions in CSV format
+- `predictions_YYYYMMDD_HHMMSS.png`: Visualization of predictions
 
-The prediction script expects a CSV file with:
-- `game_date`: Date of the game
-- `home_team`: Home team abbreviation
-- `away_team`: Away team abbreviation
+### Additional Options
 
-## Model Performance
+- `--model_dir`: Specify the directory containing model files (default: 'model')
+- `--output_dir`: Specify the directory to save predictions (default: 'predictions')
 
-The model achieves:
-- Accuracy: ~70% on test data
-- ROC AUC: ~0.75
-- Log Loss: ~0.55
+## Model Details
 
-## Future Improvements
+The model uses the following features:
+- Team statistics (points, field goal percentage, rebounds, etc.)
+- Home/Away team indicators
+- Game date features (day of week, month)
+- Historical performance metrics
 
-- Incorporate player-level data and injury information
-- Add betting odds as features
-- Explore ensemble methods combining multiple models
-- Develop a web interface for predictions
+## Data Sources
 
-## License
-
-MIT License
+All data is fetched directly from the official NBA API using the `nba_api` package. The data includes:
+- Game results and box scores
+- Team statistics and averages
+- Current season schedule
+- Team information and abbreviations
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request. 
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details. 

@@ -7,6 +7,7 @@ from datetime import datetime
 import json
 import matplotlib.pyplot as plt
 import seaborn as sns
+from nba_data_fetcher import fetch_upcoming_schedule, fetch_team_stats
 
 def load_model_and_preprocessor(model_dir='model'):
     """
@@ -280,64 +281,87 @@ def predict_and_save_upcoming_games(schedule_file, team_stats_file=None, model_d
 
 def main():
     """
-    Main function for predicting NBA games
+    Main function to predict NBA games
     """
-    parser = argparse.ArgumentParser(description='Predict NBA game outcomes')
-    subparsers = parser.add_subparsers(dest='command', help='Command to run')
-    
-    # Parser for single game prediction
-    single_parser = subparsers.add_parser('single', help='Predict single game')
-    single_parser.add_argument('--home', required=True, help='Home team abbreviation (e.g., LAL)')
-    single_parser.add_argument('--away', required=True, help='Away team abbreviation (e.g., BOS)')
-    single_parser.add_argument('--date', help='Game date (YYYY-MM-DD)')
-    single_parser.add_argument('--stats', help='Team stats file')
-    single_parser.add_argument('--model-dir', default='model', help='Model directory')
-    
-    # Parser for schedule prediction
-    schedule_parser = subparsers.add_parser('schedule', help='Predict games from schedule')
-    schedule_parser.add_argument('--schedule', required=True, help='Schedule file')
-    schedule_parser.add_argument('--stats', help='Team stats file')
-    schedule_parser.add_argument('--model-dir', default='model', help='Model directory')
-    schedule_parser.add_argument('--output-dir', default='predictions', help='Output directory')
+    parser = argparse.ArgumentParser(description='Predict NBA games')
+    parser.add_argument('--model_dir', default='model', help='Directory containing model files')
+    parser.add_argument('--output_dir', default='predictions', help='Directory to save predictions')
+    parser.add_argument('--single_game', action='store_true', help='Predict a single game')
+    parser.add_argument('--home_team', help='Home team abbreviation for single game prediction')
+    parser.add_argument('--away_team', help='Away team abbreviation for single game prediction')
+    parser.add_argument('--game_date', help='Game date for single game prediction (YYYY-MM-DD)')
     
     args = parser.parse_args()
     
-    if args.command == 'single':
+    # Create output directory if it doesn't exist
+    os.makedirs(args.output_dir, exist_ok=True)
+    
+    if args.single_game:
+        if not args.home_team or not args.away_team:
+            print("Error: --home_team and --away_team are required for single game prediction")
+            return
+        
+        # Fetch team stats
+        team_stats = fetch_team_stats()
+        team_stats.to_csv('data/team_stats.csv', index=False)
+        
         # Predict single game
         result = predict_single_game(
-            args.home, 
-            args.away, 
-            args.date, 
-            args.stats, 
+            args.home_team,
+            args.away_team,
+            args.game_date,
+            'data/team_stats.csv',
             args.model_dir
         )
         
-        # Print results
-        print("\n=== Game Prediction ===")
-        print(f"Home Team: {result['home_team']}")
-        print(f"Away Team: {result['away_team']}")
-        print(f"Game Date: {result['game_date']}")
-        print(f"\nPredicted Winner: {result['predicted_winner']}")
-        print(f"Win Probability: {result['prediction_confidence']:.2f}")
-        print(f"{result['home_team']} Win Probability: {result['home_win_probability']:.2f}")
-        print(f"{result['away_team']} Win Probability: {result['away_win_probability']:.2f}")
-        print("=======================\n")
-        
-    elif args.command == 'schedule':
-        # Predict games from schedule
-        predictions_df = predict_and_save_upcoming_games(
-            args.schedule,
-            args.stats,
-            args.model_dir,
-            args.output_dir
-        )
-        
-        # Print summary
-        print(f"\nPredicted {len(predictions_df)} upcoming games")
-        print(f"Results saved to {args.output_dir}")
+        # Print prediction
+        print("\nGame Prediction:")
+        print(f"{args.home_team} vs {args.away_team}")
+        print(f"Date: {result['game_date']}")
+        print(f"Predicted Winner: {result['predicted_winner']}")
+        print(f"Home Win Probability: {result['home_win_probability']:.2%}")
+        print(f"Away Win Probability: {result['away_win_probability']:.2%}")
+        print(f"Prediction Confidence: {result['prediction_confidence']:.2%}")
         
     else:
-        parser.print_help()
+        # Fetch upcoming schedule and team stats
+        print("Fetching upcoming schedule and team stats...")
+        upcoming_schedule = fetch_upcoming_schedule()
+        team_stats = fetch_team_stats()
+        
+        if upcoming_schedule.empty:
+            print("No upcoming games found in the next 7 days.")
+            return
+        
+        # Create prediction data
+        upcoming_games_df = create_upcoming_schedule(
+            'data/upcoming_schedule.csv',
+            'data/team_stats.csv'
+        )
+        
+        # Load model and preprocessor
+        model, preprocessor, feature_columns, categorical_features = load_model_and_preprocessor(args.model_dir)
+        
+        # Make predictions
+        predictions_df = predict_upcoming_games(
+            upcoming_games_df,
+            model,
+            preprocessor,
+            feature_columns,
+            categorical_features
+        )
+        
+        # Save predictions
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        predictions_file = os.path.join(args.output_dir, f'predictions_{timestamp}.csv')
+        predictions_df.to_csv(predictions_file, index=False)
+        
+        # Create visualization
+        viz_file = os.path.join(args.output_dir, f'predictions_{timestamp}.png')
+        visualize_predictions(predictions_df, viz_file)
+        
+        print(f"\nPredictions saved to {predictions_file}")
+        print(f"Visualization saved to {viz_file}")
 
 if __name__ == "__main__":
     main() 
